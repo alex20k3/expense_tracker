@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+
 from sqlalchemy.orm import Session
 
 from .. import schemas, models, utils
@@ -32,6 +34,21 @@ def create_group(
     db.commit()
 
     return group
+
+@router.get("/", response_model=List[schemas.GroupOut])
+def list_my_groups(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    # все группы, где пользователь состоит как член
+    groups = (
+        db.query(models.Group)
+        .join(models.GroupMember, models.Group.id == models.GroupMember.group_id)
+        .filter(models.GroupMember.user_id == current_user.id)
+        .all()
+    )
+    return groups
+
 
 
 @router.post("/{group_id}/members/{user_id}")

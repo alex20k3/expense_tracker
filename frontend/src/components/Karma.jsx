@@ -26,7 +26,8 @@ export default function Karma({ apiUrl, token }) {
       {error && <div className="error">{error}</div>}
       {karma ? (
         <p>
-          Пользователь #{karma.user_id}: <strong>{karma.karma_points}</strong> очков
+          Пользователь #{karma.user_id}:{" "}
+          <strong>{karma.karma_points}</strong> очков
         </p>
       ) : (
         <p>Загрузка...</p>

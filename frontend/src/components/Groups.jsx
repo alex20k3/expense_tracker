@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Expenses from "./Expenses.jsx";
 
@@ -10,16 +10,38 @@ export default function Groups({ apiUrl, token }) {
 
   const authHeader = { Authorization: `Bearer ${token}` };
 
-  // у нас пока нет эндпоинта GET /groups — на бэке его нужно будет дописать.
-  // временно сделаем так: будем хранить последнюю созданную группу в стейте.
+  // загрузка групп с сервера
+  const loadGroups = async () => {
+    try {
+      setError("");
+      const { data } = await axios.get(`${apiUrl}/groups/`, {
+        headers: authHeader,
+      });
+      setGroups(data);
+      // если раньше уже была выбрана группа, попробуем её восстановить
+      if (data.length > 0 && !selectedGroup) {
+        setSelectedGroup(data[0]);
+      }
+    } catch (e) {
+      setError("Не удалось загрузить группы");
+    }
+  };
+
+  // вызывать при первом монтировании компонента
+  useEffect(() => {
+    loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const createGroup = async (e) => {
     e.preventDefault();
+    setError("");
     try {
-      const { data } = await axios.post(
-        `${apiUrl}/groups/`,
-        newGroup,
-        { headers: authHeader }
-      );
+      const { data } = await axios.post(`${apiUrl}/groups/`, newGroup, {
+        headers: authHeader,
+      });
+      // после создания можно либо просто добавить в список,
+      // либо перезагрузить группы с сервера — я добавляю вручную:
       setGroups((prev) => [...prev, data]);
       setNewGroup({ name: "", description: "" });
     } catch (e) {
@@ -54,20 +76,14 @@ export default function Groups({ apiUrl, token }) {
         <ul>
           {groups.map((g) => (
             <li key={g.id}>
-              <button onClick={() => setSelectedGroup(g)}>
-                {g.name}
-              </button>
+              <button onClick={() => setSelectedGroup(g)}>{g.name}</button>
             </li>
           ))}
         </ul>
       </div>
       <div className="groups-content">
         {selectedGroup ? (
-          <Expenses
-            apiUrl={apiUrl}
-            token={token}
-            group={selectedGroup}
-          />
+          <Expenses apiUrl={apiUrl} token={token} group={selectedGroup} />
         ) : (
           <p>Выбери группу, чтобы увидеть расходы</p>
         )}

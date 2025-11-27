@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Auth from "./components/Auth.jsx";
 import Groups from "./components/Groups.jsx";
 import Karma from "./components/Karma.jsx";
-import "./App.css";
+import "./index.css";
 
 const API_URL = "http://127.0.0.1:8000";
 

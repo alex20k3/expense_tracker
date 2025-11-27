@@ -12,9 +12,29 @@ export default function Expenses({ apiUrl, token, group }) {
 
   const authHeader = { Authorization: `Bearer ${token}` };
 
-  // тут тоже: у нас нет GET /expenses/group/{id}, так что пока показываем только что создали
+  // загрузка расходов для группы
+  const loadExpenses = async () => {
+    try {
+      setError("");
+      const { data } = await axios.get(
+        `${apiUrl}/expenses/group/${group.id}`,
+        { headers: authHeader }
+      );
+      setExpenses(data);
+    } catch (e) {
+      setError("Не удалось загрузить расходы");
+    }
+  };
+
+  // при первом рендере компонента (и при смене группы)
+  useEffect(() => {
+    loadExpenses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group.id]);
+
   const createExpense = async (e) => {
     e.preventDefault();
+    setError("");
     try {
       const payload = {
         amount: Number(form.amount),
@@ -28,10 +48,18 @@ export default function Expenses({ apiUrl, token, group }) {
         payload,
         { headers: authHeader }
       );
+      // можно либо заново грузить все расходы, либо просто добавить новый сверху
       setExpenses((prev) => [data, ...prev]);
       setForm({ amount: "", description: "", category_id: "" });
     } catch (e) {
-      setError(e.response?.data?.detail || "Не удалось создать расход");
+      const resp = e.response?.data;
+      let msg = "Не удалось создать расход";
+      if (resp?.detail) {
+        if (typeof resp.detail === "string") msg = resp.detail;
+        else if (Array.isArray(resp.detail) && resp.detail[0]?.msg)
+          msg = resp.detail[0].msg;
+      }
+      setError(msg);
     }
   };
 
@@ -44,7 +72,9 @@ export default function Expenses({ apiUrl, token, group }) {
           step="0.01"
           placeholder="Сумма"
           value={form.amount}
-          onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+          onChange={(e) =>
+            setForm((p) => ({ ...p, amount: e.target.value }))
+          }
           required
         />
         <input
@@ -71,7 +101,8 @@ export default function Expenses({ apiUrl, token, group }) {
                 Доли:
                 {exp.shares.map((s) => (
                   <span key={s.user_id}>
-                    user {s.user_id}: {s.amount} ({s.is_settled ? "✔" : "—"})
+                    user {s.user_id}: {s.amount}{" "}
+                    {s.is_settled ? "✔" : "—"}
                   </span>
                 ))}
               </div>

@@ -15,7 +15,10 @@ def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
 
 
-def get_password_hash(password):
+def get_password_hash(password: str):
+    # bcrypt максимум 72 байта, на всякий случай режем
+    if len(password) > 72:
+        password = password[:72]
     return pwd_context.hash(password)
 
 

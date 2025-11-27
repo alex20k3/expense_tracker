@@ -15,25 +15,8 @@ export default function Auth({ apiUrl, onLogin }) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const register = async () => {
+    const login = async () => {
     try {
-      await axios.post(`${apiUrl}/auth/register`, {
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        income_category: form.income_category,
-      });
-      // после регистрации сразу логиним
-      await login();
-    } catch (e) {
-      setError(e.response?.data?.detail || "Ошибка регистрации");
-    }
-  };
-
-  const login = async () => {
-    try {
-      // у нас login принимает email и password как form data? мы делали как query-параметры.
-      // проще — отправим как form-data:
       const params = new URLSearchParams();
       params.append("email", form.email);
       params.append("password", form.password);
@@ -43,12 +26,55 @@ export default function Auth({ apiUrl, onLogin }) {
       });
       onLogin(data.access_token);
     } catch (e) {
-      setError(e.response?.data?.detail || "Ошибка входа");
+      const data = e.response?.data;
+      let msg = "Ошибка входа";
+
+      if (data?.detail) {
+        if (typeof data.detail === "string") {
+          msg = data.detail;
+        } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
+          msg = data.detail[0].msg;
+        } else {
+          msg = JSON.stringify(data.detail);
+        }
+      }
+
+      setError(msg);
     }
   };
 
+
+    const register = async () => {
+    try {
+      await axios.post(`${apiUrl}/auth/register`, {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        income_category: form.income_category,
+      });
+      await login();
+    } catch (e) {
+      const data = e.response?.data;
+      let msg = "Ошибка регистрации";
+
+      if (data?.detail) {
+        if (typeof data.detail === "string") {
+          msg = data.detail;
+        } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
+          msg = data.detail[0].msg;
+        } else {
+          msg = JSON.stringify(data.detail);
+        }
+      }
+
+      setError(msg);
+    }
+  };
+
+
   const onSubmit = (e) => {
     e.preventDefault();
+    setError("");
     if (mode === "login") {
       login();
     } else {
