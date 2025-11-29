@@ -9,8 +9,12 @@ export default function Expenses({ apiUrl, token, group }) {
     category_id: "",
   });
   const [error, setError] = useState("");
+  const [payAmounts, setPayAmounts] = useState({}); // ключ: `${expenseId}-${userId}`
 
   const authHeader = { Authorization: `Bearer ${token}` };
+
+  // загрузка расходов...
+
 
   // загрузка расходов для группы
   const loadExpenses = async () => {
@@ -63,9 +67,65 @@ export default function Expenses({ apiUrl, token, group }) {
     }
   };
 
-  return (
+    const handleDeleteExpense = async (expenseId) => {
+    setError("");
+    try {
+      await axios.delete(`${apiUrl}/expenses/${expenseId}`, {
+        headers: authHeader,
+      });
+      setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
+    } catch (e) {
+      setError("Не удалось удалить расход");
+    }
+  };
+
+    const handlePayShare = async (expense, share, value) => {
+  const num = Number(value);
+
+  if (!value || isNaN(num) || num <= 0) {
+    setError("Введите корректное число");
+    return;
+  }
+
+  const remaining = share.amount - (share.paid_amount ?? 0);
+
+  if (num > remaining + 1e-6) {
+    setError("Введите корректное число (сумма больше остатка долга)");
+    return;
+  }
+
+  setError("");
+
+  try {
+    await axios.post(
+      `${apiUrl}/expenses/${expense.id}/settle`,
+      { amount: num },
+      {
+        headers: {
+          ...authHeader,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // перезагружаем расходы, чтобы подхватить новый paid_amount / is_settled
+    await loadExpenses();
+
+    // очищаем поле ввода для этой доли
+    const key = `${expense.id}-${share.user_id}`;
+    setPayAmounts((prev) => ({ ...prev, [key]: "" }));
+  } catch (e) {
+    setError("Не удалось оплатить долю");
+  }
+};
+
+
+
+
+    return (
     <div>
       <h2>Группа: {group.name}</h2>
+
       <form onSubmit={createExpense} className="expense-form">
         <input
           type="number"
@@ -86,27 +146,73 @@ export default function Expenses({ apiUrl, token, group }) {
         />
         <button type="submit">Добавить расход</button>
       </form>
+
       {error && <div className="error">{error}</div>}
 
       <h3>Расходы</h3>
       {expenses.length === 0 && <p>Пока пусто</p>}
+
       <ul className="expense-list">
         {expenses.map((exp) => (
           <li key={exp.id} className="expense-item">
-            <div>
-              <strong>{exp.amount}</strong> — {exp.description}
-            </div>
-            {exp.shares && exp.shares.length > 0 && (
-              <div className="shares">
-                Доли:
-                {exp.shares.map((s) => (
-                  <span key={s.user_id}>
-                    user {s.user_id}: {s.amount}{" "}
-                    {s.is_settled ? "✔" : "—"}
-                  </span>
-                ))}
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>
+                <strong>{exp.amount}</strong> — {exp.description}
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => handleDeleteExpense(exp.id)}
+              >
+                Удалить
+              </button>
+            </div>
+
+            {exp.shares && exp.shares.length > 0 && (
+  <div className="shares">
+    Доли:
+    {exp.shares.map((s) => {
+      const key = `${exp.id}-${s.user_id}`;
+      const value = payAmounts[key] || "";
+
+      const paid = s.paid_amount ?? 0;
+      const remaining = (s.amount - paid).toFixed(2);
+
+      return (
+        <div key={key} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <span>
+            {s.user_name}: долг {s.amount} (оплачено {paid}, осталось {remaining}){" "}
+            {s.is_settled ? "✔ оплачено" : "— не оплачено"}
+          </span>
+
+          {!s.is_settled && (
+            <>
+              <input
+                type="number"
+                step="0.01"
+                style={{ width: "80px" }}
+                placeholder="Сумма"
+                value={value}
+                onChange={(e) =>
+                  setPayAmounts((prev) => ({
+                    ...prev,
+                    [key]: e.target.value,
+                  }))
+                }
+              />
+              <button
+                type="button"
+                onClick={() => handlePayShare(exp, s, value)}
+              >
+                Оплатить
+              </button>
+            </>
+          )}
+        </div>
+      );
+    })}
+  </div>
+)}
+
           </li>
         ))}
       </ul>

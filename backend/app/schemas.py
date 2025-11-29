@@ -2,42 +2,44 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
-
-class UserCreate(BaseModel):
+class UserBase(BaseModel):
     name: str
     email: EmailStr
+    income_category: str = "medium"  # "low" / "medium" / "high"
+
+class UserCreate(UserBase):
     password: str
-    income_category: str = "medium"
 
 
-class UserOut(BaseModel):
+class UserOut(UserBase):
     id: int
-    name: str
-    email: EmailStr
-    income_category: str
     karma_points: int
 
     class Config:
-        from_attributes = True
+        from_attributes = True  # вместо orm_mode в pydantic v2
+
 
 
 class Token(BaseModel):
     access_token: str
-    token_type: str = "bearer"
+    token_type: str
 
 
-class GroupCreate(BaseModel):
+class GroupBase(BaseModel):
     name: str
     description: Optional[str] = None
 
 
-class GroupOut(BaseModel):
+class GroupCreate(GroupBase):
+    pass
+
+
+class GroupOut(GroupBase):
     id: int
-    name: str
-    description: Optional[str] = None
+    owner_id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 
 class ExpenseCreate(BaseModel):
@@ -48,19 +50,27 @@ class ExpenseCreate(BaseModel):
 
 class ExpenseShareOut(BaseModel):
     user_id: int
-    amount: float
+    user_name: str
+    amount: float          # полный долг
+    paid_amount: float     # уже оплачено
     is_settled: bool
 
     class Config:
         from_attributes = True
 
 
+
 class ExpenseOut(BaseModel):
     id: int
+    group_id: int
+    creator_id: int
     amount: float
-    description: Optional[str]
-    created_at: datetime
-    shares: List[ExpenseShareOut]
+    description: Optional[str] = None
+    shares: List[ExpenseShareOut] = []
 
     class Config:
         from_attributes = True
+
+
+class PaymentIn(BaseModel):
+    amount: float

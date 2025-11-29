@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, ForeignKey, Float, Boolean, DateTime, Text
+    Column, Integer, String, ForeignKey, Float, Boolean, DateTime, Text, func
 )
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -14,12 +14,20 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
 
-    # выбранная категория дохода (для автокоэффициента)
-    income_category = Column(String, default="medium")  # low | medium | high
+    # категория дохода: low / medium / high
+    income_category = Column(String, default="medium")
 
+    # карма
     karma_points = Column(Integer, default=0)
 
-    memberships = relationship("GroupMember", back_populates="user")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    memberships = relationship(
+        "GroupMember",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
 
 
 class Group(Base):
@@ -29,10 +37,10 @@ class Group(Base):
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    members = relationship("GroupMember", back_populates="group")
-    expenses = relationship("Expense", back_populates="group")
-
+    members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
+    expenses = relationship("Expense", back_populates="group", cascade="all, delete-orphan")
 
 class GroupMember(Base):
     __tablename__ = "group_members"
@@ -78,11 +86,14 @@ class ExpenseShare(Base):
     Конкретная доля участника по расходу, уже рассчитанная с учётом коэффициента.
     """
     __tablename__ = "expense_shares"
+    __allow_unmapped__ = True
+
 
     id = Column(Integer, primary_key=True, index=True)
-    expense_id = Column(Integer, ForeignKey("expenses.id"))
-    user_id = Column(Integer, ForeignKey("users.id"))
-    amount = Column(Float, nullable=False)
+    expense_id = Column(Integer, ForeignKey("expenses.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    amount = Column(Float, nullable=False)          # полный долг
+    paid_amount = Column(Float, default=0.0)        # СКОЛЬКО уже оплачено
     is_settled = Column(Boolean, default=False)
 
     expense = relationship("Expense", back_populates="shares")
