@@ -13,6 +13,19 @@ export default function Expenses({ apiUrl, token, group }) {
 
   const authHeader = { Authorization: `Bearer ${token}` };
 
+
+  const calcDaysLeft = (dueDateStr) => {
+  if (!dueDateStr) return null;
+  const due = new Date(dueDateStr);
+  const today = new Date();
+  // сбрасываем время, чтобы считать "по дням"
+  due.setHours(0,0,0,0);
+  today.setHours(0,0,0,0);
+  const diffMs = due - today;
+  return Math.round(diffMs / (1000 * 60 * 60 * 24)); // может быть отрицательным
+};
+
+
   // загрузка расходов...
 
 
@@ -157,8 +170,22 @@ export default function Expenses({ apiUrl, token, group }) {
           <li key={exp.id} className="expense-item">
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div>
-                <strong>{exp.amount}</strong> — {exp.description}
-              </div>
+  <strong>{exp.amount}</strong> — {exp.description}
+
+  {exp.due_date && (() => {
+    const daysLeft = calcDaysLeft(exp.due_date);
+    const karmaHint = daysLeft ?? 0; // столько кармы будет при ПОЛНОМ закрытии сегодня
+
+    return (
+      <div style={{ fontSize: "0.9em", opacity: 0.85, marginTop: "4px" }}>
+        Дедлайн: {new Date(exp.due_date).toLocaleDateString()} ·{" "}
+        {daysLeft >= 0 ? `осталось ${daysLeft} дн.` : `просрочено на ${Math.abs(daysLeft)} дн.`} ·{" "}
+        Карма при закрытии сегодня: {karmaHint >= 0 ? `+${karmaHint}` : `${karmaHint}`}
+      </div>
+    );
+  })()}
+</div>
+
               <button
                 type="button"
                 onClick={() => handleDeleteExpense(exp.id)}

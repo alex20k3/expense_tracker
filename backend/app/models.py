@@ -2,7 +2,7 @@ from sqlalchemy import (
     Column, Integer, String, ForeignKey, Float, Boolean, DateTime, Text, func
 )
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timedelta
 from .db import Base
 
 
@@ -65,6 +65,7 @@ class Category(Base):
 
 class Expense(Base):
     __tablename__ = "expenses"
+    __allow_unmapped__ = True
 
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("groups.id"))
@@ -75,10 +76,12 @@ class Expense(Base):
     description = Column(String, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
-
+    due_date = Column(DateTime, nullable=False, default=lambda: datetime.utcnow() + timedelta(days=7))
+    
     group = relationship("Group", back_populates="expenses")
     shares = relationship("ExpenseShare", back_populates="expense")
     history = relationship("ExpenseHistory", back_populates="expense")
+    
 
 
 class ExpenseShare(Base):
