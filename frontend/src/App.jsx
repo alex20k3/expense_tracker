@@ -4,7 +4,7 @@ import Groups from "./components/Groups.jsx";
 import Karma from "./components/Karma.jsx";
 import "./index.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "/api";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || "");

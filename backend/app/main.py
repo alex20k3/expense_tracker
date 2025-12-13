@@ -17,10 +17,12 @@ app.add_middleware(
 # создаём таблицы
 Base.metadata.create_all(bind=engine)
 
-app.include_router(users.router)
-app.include_router(groups.router)
-app.include_router(expenses.router)
-app.include_router(karma.router)
+app.include_router(users.router, prefix="/api")
+app.include_router(groups.router, prefix="/api")
+app.include_router(expenses.router, prefix="/api")
+app.include_router(karma.router, prefix="/api")
+
+
 
 
 @app.get("/")
