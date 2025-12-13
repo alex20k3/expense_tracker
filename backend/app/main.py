@@ -4,6 +4,11 @@ from . import models
 from .routers import users, groups, expenses, karma
 from fastapi.middleware.cors import CORSMiddleware
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
+
+app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+
 app = FastAPI(title="Shared Expense Tracker")
 
 app.add_middleware(
